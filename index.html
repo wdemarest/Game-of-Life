@@ -1,0 +1,180 @@
+<html>
+<head>
+<script>
+
+	let map = [];
+
+	let newMap = [];
+
+	let mapSize = 50;
+
+	let frameRate = 1000;
+
+	let viewRate = frameRate;
+
+	let paused = false;
+
+	for(let i=0; i < mapSize; i++){
+		map.push([])
+		for(let j=0; j < mapSize; j++){
+			map[i].push((Math.random() < 0.1 ? 1:0))
+		}
+	}
+
+
+
+	function shallowCopyMap(targetMap){
+		let copyMap = [];
+		for(let i=0; i < targetMap.length; i++){
+			copyMap.push([])
+			for(let j=0; j < targetMap[i].length; j++){
+				copyMap[i].push(targetMap[i][j])
+			}
+		}
+		return copyMap;
+	}
+
+	let view;
+
+	setTimeout(()=>{view = new View()}, 10);
+	setTimeout(()=>{new Control()}, frameRate+1);
+
+
+
+
+	class View {
+		constructor(){
+			this.canvas = document.getElementById("myCanvas");
+
+			this.ctx = this.canvas.getContext("2d");
+
+			setInterval(()=>{this.tick()}, viewRate);
+		}
+		
+		tick(){
+			for(let i=0; i < map.length; i++){
+				for(let j=0; j < map[i].length; j++){
+					this.ctx.beginPath();
+					this.ctx.rect(i*10, j*10, 9, 9);
+					this.ctx.fillStyle = (map[i][j] ? "#000000" : "#cccccc");
+					this.ctx.fill();
+				}
+			}
+		}
+	}
+
+	class Sim {
+		constructor(){
+			setInterval(()=>{this.tick()}, frameRate); //Tick Speed
+		}
+		
+		countSurroundings(x, y){
+			let count = 0;
+
+			for(let x2=-1; x2 <= 1; x2++){
+				for(let y2=-1; y2 <= 1; y2++){
+
+					if((x2 == 0 && y2 == 0) || (x == 0 && x2 == -1)  || (x == mapSize-1 && x2 == 1)){
+						continue;
+					}
+
+					if(map[x+x2][y+y2]){
+						count++;
+					}
+
+				}
+			}
+			return count++;
+		}
+
+		set(x, y, value){
+			if(x < 0 || x > mapSize-1 || y < 0 || y > mapSize-1){
+				return;
+			}
+
+			newMap[x][y] = value;
+		}
+
+		update(){
+			map = shallowCopyMap(newMap);
+			newMap = shallowCopyMap(map)
+		}
+
+		tick(){
+
+			(newMap.length == 0 ? newMap = shallowCopyMap(map):"")
+
+			if(!paused){
+				for(let x=0; x < map.length; x++){
+					for(let y=0; y < map[x].length; y++){
+						
+						let cell = map[x][y];
+
+						if(cell == 0){
+							let count = this.countSurroundings(x, y)
+							if(count == 3){
+								this.set(x, y, 1);
+							}
+						}
+						if(cell == 1){
+							let count = this.countSurroundings(x, y)
+							if(count < 2 || count > 3){
+								this.set(x, y, 0);
+							}
+						}
+					}
+				}
+			}
+			this.update()
+		}
+	}
+
+	let sim = new Sim()
+
+	class Control {
+		constructor(){
+			document.onclick = this.click;
+			document.addEventListener('keypress', (e)=>{
+				if(e.key == 'q'){
+					paused = (paused ? false:true);
+				}
+				if(e.key == '1'){
+					
+				}
+			});
+
+		}
+
+		click(e){
+
+			// WARNING: GIVING THE CANVAS A BORDER WILL MESS UP THIS VERY WEIRD MATH.
+
+			let x = 0;
+			let y = 0;
+
+			x = e.pageX;
+  			y = e.pageY;
+
+  			let gCanvasElement = document.getElementById("myCanvas");
+
+			x -= gCanvasElement.offsetLeft;
+			y -= gCanvasElement.offsetTop;
+
+			x = Math.floor(x/10);
+			y = Math.floor(y/10);
+
+			
+			sim.set(x, y, (map[x][y] ? 0:1))
+
+			sim.update();
+			view.tick();
+		}
+	}
+
+	
+</script>
+</head>
+<body>
+	<canvas id="myCanvas" width="500" height="500" ></canvas>
+</body>
+</html>
